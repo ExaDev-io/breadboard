@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import useActiveTab from "../../../chrome-api-hooks/use-active-tab";
-import useCurrentTabText from "../../../chrome-api-hooks/use-current-tab-text";
 import { PacmanLoader } from "react-spinners";
 import useTextSelection from "../../../chrome-api-hooks/use-text-selection";
 import { ExtensionBoardRunner } from "@breadboard/classes/ExtensionBoardRunner";
-import serializedClaudeBoard from "@breadboard/graphs/claudeBoard.json";
+import serializedClaudeBoard from "@breadboard/graphs/AudioTranscriptBoard.json";
 import { ClaudeKit } from "@breadboard/kits/kits-as-code-node";
+import audioFile from "./audio-sample.mp3";
 
 const Summariser = (): React.JSX.Element => {
   const [output, setOutput] = useState<React.ReactNode | undefined>(undefined);
@@ -13,24 +13,25 @@ const Summariser = (): React.JSX.Element => {
   const [key, setKey] = useState<string>("");
 
   useEffect(() => {
-    chrome.storage.sync.get(["CLAUDE_API_KEY"], (result) => {
-      setKey(result["CLAUDE_API_KEY"]);
+    chrome.storage.sync.get(["HUGGING_FACE_API_KEY"], (result) => {
+      setKey(result["HUGGING_FACE_API_KEY"]);
     });
   }, [key]);
 
   const handlePageSummarisation = async (): Promise<void> => {
-    const activeTab = await useActiveTab();
-    const activeTabText = await useCurrentTabText(activeTab.id ?? 0);
+    //const activeTab = await useActiveTab();
+    //const activeTabText = await useCurrentTabText(activeTab.id ?? 0);
     setLoading(true); //TODO: use the "status" property on the boardRun to set loading
-    const extensionRunner = new ExtensionBoardRunner(serializedClaudeBoard, [
-      ClaudeKit,
-    ]);
+    const extensionRunner = new ExtensionBoardRunner(serializedClaudeBoard, []);
     const boardRun = await extensionRunner.runBoard({
-      message: activeTabText,
-      claudeKey: key,
+      data: audioFile,
+      apiKey: key,
     });
-    if (boardRun) setOutput(boardRun["completion"] as React.ReactNode);
-    setLoading(false);
+    if (boardRun) {
+      console.log(boardRun);
+      setOutput(boardRun["completion"] as React.ReactNode);
+      setLoading(false);
+    }
   };
 
   const handleSelectionSummarisation = async () => {

@@ -35,6 +35,7 @@ export default defineManifest(async () => ({
     "storage",
     "contextMenus",
     "downloads",
+    "fileBrowserHandler",
   ],
   host_permissions: ["https://*/*", "http://*/*"],
   content_security_policy: {
