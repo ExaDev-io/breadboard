@@ -16,6 +16,7 @@ const AudioRecorder = (): React.JSX.Element => {
 
   const handleRecordingStart = async (): Promise<void> => {
     //Capture audio on button press
+    console.log(navigator.mediaDevices.getUserMedia({ audio: true }));
     chrome.tabCapture.capture({ audio: true }, (stream) => {
       // Continue to play the captured audio to the user.
       const output = new AudioContext();
@@ -62,10 +63,9 @@ const AudioRecorder = (): React.JSX.Element => {
         </button>
       </section>
       <section className="output">
-        <audio controls>
-          <source src={recording} type="audio/mpeg" />
-          Your browser does not support the audio tag.
-        </audio>
+        {/*
+		If an audio transcript is available, display it here
+		*/}
       </section>
     </main>
   );

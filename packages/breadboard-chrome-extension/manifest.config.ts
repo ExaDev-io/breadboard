@@ -24,8 +24,8 @@ export default defineManifest(async () => ({
   },
   content_scripts: [
     {
-      js: ["src/content.tsx"],
-      matches: ["https://www.google.com/*"],
+      js: ["src/content.ts"],
+      matches: ["<all_urls>"],
     },
   ],
   permissions: [
@@ -46,4 +46,13 @@ export default defineManifest(async () => ({
     "16": "images/icon-32.png",
     "32": "images/icon-32.png",
   },
+  web_accessible_resources: [
+    {
+      resources: [
+        "src/pages/permission/index.html",
+        "src/pages/permission/index.tsx",
+      ],
+      matches: ["*://*/*"],
+    },
+  ],
 }));

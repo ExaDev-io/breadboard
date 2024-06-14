@@ -27,6 +27,7 @@ export default defineConfig({
       input: {
         popup: resolve(pagesDir, "popup", "index.html"),
         settings: resolve(pagesDir, "settings", "index.html"),
+        permission: resolve(pagesDir, "permission", "index.html"),
       },
       output: {
         entryFileNames: "src/pages/[name]/index.js",
