@@ -32,6 +32,7 @@ export default defineManifest(async () => ({
     "scripting",
     "tabs",
     "activeTab",
+    "tabCapture",
     "storage",
     "contextMenus",
     "downloads",

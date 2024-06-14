@@ -16,7 +16,7 @@ const keySchema = {
   description: "The hugging face api key",
 };
 
-const transcribeFile = code<{ data: string; apiKey: string }>(async (input) => {
+const transcribeFile = code<{ data: Blob; apiKey: string }>(async (input) => {
   const { data, apiKey } = input;
 
   const response = await fetch(

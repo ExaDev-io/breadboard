@@ -62,7 +62,7 @@ footer {
   font-size: xx-small;
 }
 
-.summarisationForm {
+.outputForm {
   padding: 2em;
   display: flex;
   flex-direction: column;
@@ -70,7 +70,7 @@ footer {
   gap: 1em;
 }
 
-.summary {
+.output {
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
