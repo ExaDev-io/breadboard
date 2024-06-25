@@ -4,7 +4,6 @@ import serializedAudioTranscriptBoard from "@breadboard/graphs/AudioTranscriptBo
 
 const AudioRecorder = (): React.JSX.Element => {
   const [output, setOutput] = useState<React.ReactNode | undefined>(undefined);
-  const [recording, setRecording] = useState<any>({});
   const [key, setKey] = useState<string>("");
   console.log(output);
 
@@ -16,8 +15,7 @@ const AudioRecorder = (): React.JSX.Element => {
 
   const handleRecordingStart = async (): Promise<void> => {
     //Capture audio on button press
-    console.log(navigator.mediaDevices.getUserMedia({ audio: true }));
-    chrome.tabCapture.capture({ audio: true }, (stream) => {
+    /* chrome.tabCapture.capture({ audio: true }, (stream) => {
       // Continue to play the captured audio to the user.
       const output = new AudioContext();
       if (stream) {
@@ -26,12 +24,11 @@ const AudioRecorder = (): React.JSX.Element => {
         console.log(source);
         const recorder = new MediaRecorder(source.mediaStream);
         recorder.start();
-        setTimeout("", 5000);
         setRecording(recorder.ondataavailable);
         console.log(recorder.ondataavailable);
         console.log(recording);
       }
-    });
+    }); */
   };
 
   const handleRecordingStop = async () => {
@@ -44,12 +41,11 @@ const AudioRecorder = (): React.JSX.Element => {
       []
     );
     const boardRun = await extensionRunner.runBoard({
-      data: recording,
+      data: {},
       apiKey: key,
     });
     if (boardRun) {
       setOutput(boardRun["completion"] as React.ReactNode);
-      console.log(boardRun);
     }
   };
 

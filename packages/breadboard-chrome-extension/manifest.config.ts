@@ -50,9 +50,9 @@ export default defineManifest(async () => ({
     {
       resources: [
         "src/pages/permission/index.html",
-        "src/pages/permission/index.tsx",
+        "src/pages/permission/index.js",
       ],
-      matches: ["*://*/*"],
+      matches: ["<all_urls>"],
     },
   ],
 }));
