@@ -68,14 +68,13 @@ const urlTemplater = urlTemplate({
   per_page: per_page,
   search: search,
   select: select,
-})
+});
 
 const fetcher = fetch({
   $id: "fetch",
   method: "GET",
   url: urlTemplater.outputs.url,
-})
-
+});
 
 const { spread } = code(
   {
@@ -88,11 +87,11 @@ const { spread } = code(
   },
   { spread: object({}, "string") },
   ({ obj }) => {
-      if (typeof obj !== "object") {
-        throw new Error(`object is of type ${typeof obj} not object`);
-      }
-      const spread = { ...obj }
-      return { spread };
+    if (typeof obj !== "object") {
+      throw new Error(`object is of type ${typeof obj} not object`);
+    }
+    const spread = { ...obj }
+    return { spread };
   }
 ).outputs;
 
@@ -113,4 +112,4 @@ export default board({
     select
   },
   outputs: { results }
-})
+});
