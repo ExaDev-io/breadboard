@@ -30,16 +30,12 @@ const entity = input({
 });
 
 const page = input({
-  // type: "number",
-  // default: 5,
   default: "5",
   title: "Results per page",
   description: "Number of results to return per page",
 });
 
 const per_page = input({
-  // type: "number",
-  // default: 5,
   default: "5",
   title: "Results per page",
   description: "Number of results to return per page",
