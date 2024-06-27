@@ -1,16 +1,18 @@
 {
-  "name": "@google-labs/node-nursery-web",
+  "name": "@google-labs/graph-integrity",
   "publishConfig": {
     "registry": "https://wombat-dressing-room.appspot.com"
   },
-  "version": "1.1.3",
-  "description": "A Nursery for new nodes that run in both Web and Node environments. Move to other kits to publish.",
+  "private": true,
+  "version": "0.0.14",
+  "description": "A library for analyzing the integrity of a graph",
   "main": "./dist/src/index.js",
   "exports": "./dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "type": "module",
   "scripts": {
     "prepack": "npm run build",
+    "generate:docs": "wireit",
     "test": "wireit",
     "build": "wireit",
     "build:tsc": "wireit",
@@ -20,7 +22,6 @@
     "build": {
       "dependencies": [
         "../breadboard:build",
-        "../template-kit:build",
         "build:tsc"
       ]
     },
@@ -30,8 +31,7 @@
         "FORCE_COLOR": "1"
       },
       "dependencies": [
-        "../breadboard:build:tsc",
-        "../core-kit:build:tsc"
+        "../breadboard:build:tsc"
       ],
       "files": [
         "src/**/*.ts",
@@ -67,10 +67,24 @@
         "../../.eslintrc.json"
       ],
       "output": []
+    },
+    "generate:docs": {
+      "command": "typedoc --plugin typedoc-plugin-markdown",
+      "dependencies": [
+        "build:tsc"
+      ],
+      "files": [
+        "src/**/*.ts",
+        "tsconfig.json",
+        "../../core/tsconfig/base.json"
+      ],
+      "output": [
+        "docs/api/"
+      ]
     }
   },
   "repository": {
-    "directory": "packages/node-nursery-web",
+    "directory": "packages/graph-integrity",
     "type": "git",
     "url": "git+https://github.com/breadboard-ai/breadboard.git"
   },
@@ -99,16 +113,13 @@
   "homepage": "https://github.com/breadboard-ai/breadboard#readme",
   "devDependencies": {
     "@ava/typescript": "^4.0.0",
-    "@google-labs/core-kit": "^0.9.0",
-    "@google-labs/template-kit": "^0.3.2",
     "@google-labs/tsconfig": "^0.0.1",
-    "@types/gapi": "^0.0.47",
-    "@types/node": "^20.14.9",
+    "@types/node": "^20.14.8",
     "@typescript-eslint/eslint-plugin": "^7.14.1",
     "@typescript-eslint/parser": "^7.14.1",
     "ava": "^5.2.0",
-    "npm": "^10.8.1",
-    "typescript": "^5.5.2"
+    "typedoc": "^0.25.12",
+    "typescript": "^5.4.5"
   },
   "dependencies": {
     "@google-labs/breadboard": "^0.20.0"
