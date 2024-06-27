@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import {
   BoardInfoUpdateEvent,
@@ -22,6 +22,12 @@ export class BoardEditOverlay extends LitElement {
 
   @property()
   boardDescription: string | null = null;
+
+  @property()
+  boardPublished: boolean | null = null;
+
+  @property()
+  boardIsTool: boolean | null = null;
 
   @property()
   subGraphId: string | null = null;
@@ -77,8 +83,9 @@ export class BoardEditOverlay extends LitElement {
       color: var(--bb-ui-600);
     }
 
-    input,
-    textarea {
+    input[type="text"],
+    textarea,
+    select {
       margin: var(--bb-grid-size) calc(var(--bb-grid-size) * 4)
         calc(var(--bb-grid-size) * 2);
       font-size: var(--bb-body-small);
@@ -121,6 +128,28 @@ export class BoardEditOverlay extends LitElement {
       border: none;
       height: 24px;
       padding: 0 16px 0 28px;
+      margin: 0;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: var(--bb-grid-size-2);
+      align-items: center;
+    }
+
+    .split div {
+      display: flex;
+      align-items: center;
+    }
+
+    .split label {
+      margin-right: var(--bb-grid-size);
+    }
+
+    .split select,
+    .split input,
+    .split textarea {
       margin: 0;
     }
   `;
@@ -170,6 +199,8 @@ export class BoardEditOverlay extends LitElement {
               data.get("title") as string,
               data.get("version") as string,
               data.get("description") as string,
+              data.get("status") as "published" | "draft" | null,
+              data.get("tool") === "on",
               this.subGraphId
             )
           );
@@ -213,6 +244,59 @@ export class BoardEditOverlay extends LitElement {
           name="description"
           .value=${this.boardDescription || ""}
         ></textarea>
+
+        <div class="split">
+          ${this.boardPublished !== null
+            ? html`
+                <div>
+                  <label>Status</label>
+                  <select
+                    @input=${(evt: Event) => {
+                      if (!(evt.target instanceof HTMLSelectElement)) {
+                        return;
+                      }
+
+                      if (
+                        this.boardPublished &&
+                        evt.target.value !== "published"
+                      ) {
+                        if (
+                          !confirm(
+                            "This board was published. Unpublishing it may break other boards. Are you sure?"
+                          )
+                        ) {
+                          evt.preventDefault();
+                          evt.target.value = "published";
+                        }
+                      }
+                    }}
+                    name="status"
+                    .value=${this.boardPublished ? "published" : "draft"}
+                  >
+                    <option value="draft" ?selected=${!this.boardPublished}>
+                      Draft
+                    </option>
+                    <option value="published" ?selected=${this.boardPublished}>
+                      Published
+                    </option>
+                  </select>
+                </div>
+              `
+            : nothing}
+          ${this.boardIsTool !== null
+            ? html`
+                <div>
+                  <label>Tool</label>
+                  <input
+                    name="tool"
+                    type="checkbox"
+                    .value="on"
+                    ?checked=${this.boardIsTool}
+                  />
+                </div>
+              `
+            : nothing}
+        </div>
 
         <div id="controls">
           <button

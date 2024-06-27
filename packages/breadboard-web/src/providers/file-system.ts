@@ -9,6 +9,7 @@ import {
   GraphDescriptor,
   GraphProvider,
   GraphProviderCapabilities,
+  GraphProviderItem,
   blankLLMContent,
 } from "@google-labs/breadboard";
 import { GraphProviderStore } from "./types";
@@ -81,7 +82,9 @@ export class FileSystemGraphProvider implements GraphProvider {
       title: string;
       items: Map<
         string,
-        { url: string; readonly: boolean; handle: FileSystemFileHandle }
+        GraphProviderItem & {
+          handle: FileSystemFileHandle;
+        }
       >;
     }
   >();
@@ -302,17 +305,25 @@ export class FileSystemGraphProvider implements GraphProvider {
     return true;
   }
 
-  async #getFiles(
-    handle: FileSystemDirectoryHandle
-  ): Promise<
+  async #getFiles(handle: FileSystemDirectoryHandle): Promise<
     Map<
       string,
-      { url: string; readonly: boolean; handle: FileSystemFileHandle }
+      {
+        url: string;
+        readonly: boolean;
+        mine: boolean;
+        handle: FileSystemFileHandle;
+      }
     >
   > {
     const entries: [
       string,
-      { url: string; readonly: boolean; handle: FileSystemFileHandle },
+      {
+        url: string;
+        readonly: boolean;
+        mine: boolean;
+        handle: FileSystemFileHandle;
+      },
     ][] = [];
 
     for await (const [name, entry] of handle.entries()) {
@@ -332,6 +343,7 @@ export class FileSystemGraphProvider implements GraphProvider {
             encodeURIComponent(name.toLocaleLowerCase())
           ),
           readonly: false,
+          mine: true,
           handle: entry,
         },
       ]);
@@ -351,6 +363,13 @@ export class FileSystemGraphProvider implements GraphProvider {
   }
 
   async createBlank(url: URL): Promise<{ result: boolean; error?: string }> {
+    return this.create(url, blankLLMContent());
+  }
+
+  async create(
+    url: URL,
+    descriptor: GraphDescriptor
+  ): Promise<{ result: boolean; error?: string }> {
     if (!this.canProvide(url)) {
       return { result: false };
     }
@@ -374,7 +393,7 @@ export class FileSystemGraphProvider implements GraphProvider {
     await this.#refreshItems(location);
 
     // Now populate it.
-    await this.save(url, blankLLMContent());
+    await this.save(url, descriptor);
     return { result: true };
   }
 

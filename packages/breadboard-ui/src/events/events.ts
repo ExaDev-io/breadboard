@@ -24,6 +24,7 @@ export enum ToastType {
   INFORMATION = "information",
   WARNING = "warning",
   ERROR = "error",
+  PENDING = "pending",
 }
 
 /**
@@ -69,19 +70,6 @@ export class StopEvent extends Event {
   }
 }
 
-export class BoardInfoUpdateRequestEvent extends Event {
-  static eventName = "bbboardinforequestupdate";
-
-  constructor(
-    public readonly title: string | undefined,
-    public readonly version: string | undefined,
-    public readonly description: string | undefined,
-    public readonly subGraphId: string | null = null
-  ) {
-    super(BoardInfoUpdateRequestEvent.eventName, { ...eventInit });
-  }
-}
-
 export class BoardInfoUpdateEvent extends Event {
   static eventName = "bbboardinfoupdate";
 
@@ -89,6 +77,8 @@ export class BoardInfoUpdateEvent extends Event {
     public readonly title: string,
     public readonly version: string,
     public readonly description: string,
+    public readonly status: "published" | "draft" | null = null,
+    public readonly isTool: boolean | null = null,
     public readonly subGraphId: string | null = null
   ) {
     super(BoardInfoUpdateEvent.eventName, { ...eventInit });
@@ -106,6 +96,22 @@ export class BoardUnloadEvent extends Event {
 /**
  * General UI
  */
+
+export class OverflowMenuActionEvent extends Event {
+  static eventName = "bboverflowmenuaction";
+
+  constructor(public readonly action: string) {
+    super(OverflowMenuActionEvent.eventName, { ...eventInit });
+  }
+}
+
+export class OverflowMenuDismissedEvent extends Event {
+  static eventName = "bboverflowmenudismissed";
+
+  constructor() {
+    super(OverflowMenuDismissedEvent.eventName, { ...eventInit });
+  }
+}
 
 export class UndoEvent extends Event {
   static eventName = "bbundo";
@@ -290,12 +296,21 @@ export class GraphProviderDisconnectEvent extends Event {
 export class GraphProviderBlankBoardEvent extends Event {
   static eventName = "bbgraphproviderblankboard";
 
+  constructor() {
+    super(GraphProviderBlankBoardEvent.eventName, { ...eventInit });
+  }
+}
+
+export class GraphProviderSaveBoardEvent extends Event {
+  static eventName = "bbgraphprovidersaveboard";
+
   constructor(
     public readonly providerName: string,
     public readonly location: string,
-    public readonly fileName: string
+    public readonly fileName: string,
+    public readonly graph: GraphDescriptor
   ) {
-    super(GraphProviderBlankBoardEvent.eventName, { ...eventInit });
+    super(GraphProviderSaveBoardEvent.eventName, { ...eventInit });
   }
 }
 
@@ -315,6 +330,17 @@ export class GraphProviderAddEvent extends Event {
 
   constructor() {
     super(GraphProviderAddEvent.eventName, { ...eventInit });
+  }
+}
+
+export class GraphProviderSelectionChangeEvent extends Event {
+  static eventName = "bbgraphproviderselectionchange";
+
+  constructor(
+    public readonly selectedProvider: string,
+    public readonly selectedLocation: string
+  ) {
+    super(GraphProviderSelectionChangeEvent.eventName, { ...eventInit });
   }
 }
 
@@ -339,6 +365,14 @@ export class SchemaChangeEvent extends Event {
 
   constructor() {
     super(SchemaChangeEvent.eventName, { ...eventInit });
+  }
+}
+
+export class CodeChangeEvent extends Event {
+  static eventName = "bbcodechange";
+
+  constructor() {
+    super(CodeChangeEvent.eventName, { ...eventInit });
   }
 }
 

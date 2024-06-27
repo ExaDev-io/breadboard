@@ -1,0 +1,119 @@
+{
+  "author": "Google Labs Team",
+  "dependencies": {
+    "@google-labs/breadboard": "^0.20.0",
+    "@google-labs/breadboard-schema": "^1.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.8",
+    "ajv": "^8.16.0",
+    "ajv-formats": "^3.0.1",
+    "ajv-keywords": "^5.1.0",
+    "c8": "^10.1.2",
+    "ts-json-schema-generator": "^2.3.0",
+    "tsx": "^4.15.7",
+    "typescript": "^5.4.5"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": [
+      "./dist/*"
+    ],
+    "./bbm.schema.json": "./bbm.schema.json"
+  },
+  "files": [
+    "**/*.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts.map",
+    "./bbm.schema.json",
+    "./package.json"
+  ],
+  "license": "Apache-2.0",
+  "name": "@google-labs/breadboard-manifest",
+  "publishConfig": {
+    "registry": "https://wombat-dressing-room.appspot.com"
+  },
+  "repository": {
+    "directory": "packages/manifest",
+    "type": "git",
+    "url": "git+https://github.com/breadboard-ai/breadboard.git"
+  },
+  "scripts": {
+    "build": "wireit",
+    "build:schema": "wireit",
+    "build:ts": "wireit",
+    "build:verbose": "WIREIT_LOGGER=metrics npm run build",
+    "test": "wireit",
+    "test:verbose": "WIREIT_LOGGER=metrics npm run test",
+    "validate": "wireit"
+  },
+  "type": "module",
+  "version": "0.1.0",
+  "wireit": {
+    "build": {
+      "dependencies": [
+        "build:schema",
+        "build:ts"
+      ]
+    },
+    "build:schema": {
+      "command": "tsx --no-cache ./src/scripts/generate.ts",
+      "dependencies": [
+        "../breadboard:build",
+        "../schema:build",
+        "validate"
+      ],
+      "files": [
+        "src/**/*.ts",
+        "tsconfig.json",
+        "../../core/tsconfig/base.json"
+      ],
+      "output": [
+        "bbm.schema.json"
+      ]
+    },
+    "build:ts": {
+      "command": "tsc -b -v --pretty",
+      "clean": "if-file-deleted",
+      "files": [
+        "src/**/*.ts",
+        "tsconfig.json",
+        "../../core/tsconfig/base.json"
+      ],
+      "output": [
+        "dist/**",
+        "tsconfig.tsbuildinfo"
+      ],
+      "dependencies": [
+        "build:schema",
+        "../breadboard:build",
+        "../schema:build"
+      ]
+    },
+    "test": {
+      "command": "c8 node --import tsx --test-reporter spec --test src/tests/index.test.ts ",
+      "dependencies": [
+        "build"
+      ],
+      "files": [],
+      "output": [],
+      "env": {
+        "FORCE_COLOR": "1"
+      }
+    },
+    "validate": {
+      "command": "tsc --noEmit --skipLibCheck",
+      "dependencies": [
+        "../breadboard:build",
+        "../schema:build"
+      ],
+      "files": [
+        "src/**/*.ts",
+        "tsconfig.json",
+        "../../core/tsconfig/base.json"
+      ],
+      "output": []
+    }
+  }
+}

@@ -3,7 +3,7 @@
  * Copyright 2024 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { BoardInfoUpdateEvent } from "../../events/events.js";
 import { Ref, createRef, ref } from "lit/directives/ref.js";
@@ -24,6 +24,15 @@ export class BoardDetails extends LitElement {
 
   @property()
   boardDescription: string | null = null;
+
+  @property()
+  boardPublished: boolean | null = null;
+
+  @property()
+  boardIsTool: boolean | null = null;
+
+  @property()
+  active = true;
 
   @property()
   subGraphId: string | null = null;
@@ -76,10 +85,26 @@ export class BoardDetails extends LitElement {
         no-repeat;
     }
 
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: var(--bb-grid-size-2);
+      align-items: center;
+    }
+
+    .split div {
+      display: flex;
+      align-items: center;
+    }
+
+    .split label {
+      margin-right: var(--bb-grid-size);
+    }
+
     form {
       display: none;
       grid-template-rows: 16px 28px;
-      row-gap: 4px;
+      row-gap: var(--bb-grid-size-2);
       padding: 0 var(--bb-grid-size-4) var(--bb-grid-size-4)
         var(--bb-grid-size-4);
     }
@@ -88,13 +113,22 @@ export class BoardDetails extends LitElement {
       display: grid;
     }
 
+    form[disabled] > * {
+      opacity: 0.8;
+    }
+
     input[type="text"],
-    textarea {
+    textarea,
+    select {
       padding: var(--bb-grid-size);
       font: 400 var(--bb-body-medium) / var(--bb-body-line-height-medium)
         var(--bb-font-family);
       border: 1px solid var(--bb-neutral-300);
       border-radius: var(--bb-grid-size);
+    }
+
+    input[type="checkbox"] {
+      margin: 0;
     }
 
     textarea {
@@ -142,6 +176,8 @@ export class BoardDetails extends LitElement {
         data.get("title") as string,
         data.get("version") as string,
         data.get("description") as string,
+        data.get("status") as "published" | "draft" | null,
+        data.get("tool") === "on",
         this.subGraphId
       )
     );
@@ -191,6 +227,7 @@ export class BoardDetails extends LitElement {
           type="text"
           placeholder="The title for this board"
           required
+          ?disabled=${!this.active}
           .value=${this.boardTitle || ""}
         />
 
@@ -201,6 +238,7 @@ export class BoardDetails extends LitElement {
           type="text"
           placeholder="The semver version for this board, e.g. 0.0.1"
           required
+          ?disabled=${!this.active}
           .value=${this.boardVersion || ""}
         />
 
@@ -208,8 +246,64 @@ export class BoardDetails extends LitElement {
         <textarea
           name="description"
           placeholder="The description for this board"
+          ?disabled=${!this.active}
           .value=${this.boardDescription || ""}
         ></textarea>
+
+        <div class="split">
+          ${this.boardPublished !== null
+            ? html`
+                <div>
+                  <label>Status</label>
+                  <select
+                    @input=${(evt: Event) => {
+                      if (!(evt.target instanceof HTMLSelectElement)) {
+                        return;
+                      }
+
+                      if (
+                        this.boardPublished &&
+                        evt.target.value !== "published"
+                      ) {
+                        if (
+                          !confirm(
+                            "This board was published. Unpublishing it may break other boards. Are you sure?"
+                          )
+                        ) {
+                          evt.preventDefault();
+                          evt.target.value = "published";
+                        }
+                      }
+                    }}
+                    name="status"
+                    .value=${this.boardPublished ? "published" : "draft"}
+                    ?disabled=${!this.active}
+                  >
+                    <option value="draft" ?selected=${!this.boardPublished}>
+                      Draft
+                    </option>
+                    <option value="published" ?selected=${this.boardPublished}>
+                      Published
+                    </option>
+                  </select>
+                </div>
+              `
+            : nothing}
+          ${this.boardIsTool !== null
+            ? html`
+                <div>
+                  <label>Tool</label>
+                  <input
+                    name="tool"
+                    type="checkbox"
+                    .value="on"
+                    ?checked=${this.boardIsTool}
+                    ?disabled=${!this.active}
+                  />
+                </div>
+              `
+            : nothing}
+        </div>
       </form> `;
   }
 }

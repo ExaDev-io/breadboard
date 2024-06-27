@@ -13,20 +13,24 @@ import {
 } from "../index.js";
 import { NodeProxyConfig } from "../remote/config.js";
 import { HTTPClientTransport } from "../remote/http.js";
-import { ProxyClient } from "../remote/proxy.js";
+import { ProxyClient, SimplePythonProxyClient } from "../remote/proxy.js";
 import { runLocally } from "./local.js";
 import { createSecretAskingKit } from "./secrets.js";
 import { HarnessRunResult } from "./types.js";
 import { runInWorker } from "./worker.js";
 import { GraphLoader } from "../loader/types.js";
 
-export type ProxyLocation = "main" | "worker" | "http";
+export type ProxyLocation = "main" | "worker" | "http" | "python";
 
-export type HarnessProxyConfig = {
-  location: ProxyLocation;
-  url?: string;
-  nodes: NodeProxyConfig;
-};
+export type CustomProxyConfig = () => Promise<Kit>;
+
+export type HarnessProxyConfig =
+  | {
+      location: ProxyLocation;
+      url?: string;
+      nodes: NodeProxyConfig;
+    }
+  | CustomProxyConfig;
 
 export type HarnessRemoteConfig =
   | {
@@ -109,21 +113,44 @@ export type RunConfig = {
   store?: DataStore;
 };
 
-const configureKits = (config: RunConfig) => {
+const configureKits = async (config: RunConfig): Promise<Kit[]> => {
   // If a proxy is configured, add the proxy kit to the list of kits.
-  const proxyConfig = config.proxy?.[0];
-  if (!proxyConfig) return config.kits;
-
-  if (proxyConfig.location !== "http") {
-    throw new Error("Only HTTP node proxy server is supported at this time.");
+  if (!config.proxy) return config.kits;
+  const kits: Kit[] = [];
+  for (const proxyConfig of config.proxy) {
+    if (typeof proxyConfig === "function") {
+      const config = await proxyConfig();
+      if (!config) continue;
+      kits.push(await proxyConfig());
+    } else {
+      switch (proxyConfig.location) {
+        case "http": {
+          if (!proxyConfig.url) {
+            throw new Error("No node proxy server URL provided.");
+          }
+          const proxyClient = new ProxyClient(
+            new HTTPClientTransport(proxyConfig.url)
+          );
+          kits.push(proxyClient.createProxyKit(proxyConfig.nodes));
+          break;
+        }
+        case "python": {
+          if (!proxyConfig.url) {
+            throw new Error("No node proxy server URL provided.");
+          }
+          const proxyClient = new SimplePythonProxyClient(proxyConfig.url);
+          kits.push(proxyClient.createProxyKit(proxyConfig.nodes));
+          break;
+        }
+        default: {
+          throw new Error(
+            "Only HTTP node proxy server is supported at this time."
+          );
+        }
+      }
+    }
   }
-
-  if (!proxyConfig.url) {
-    throw new Error("No node proxy server URL provided.");
-  }
-
-  const proxyClient = new ProxyClient(new HTTPClientTransport(proxyConfig.url));
-  return [proxyClient.createProxyKit(proxyConfig.nodes), ...config.kits];
+  return [...kits, ...config.kits];
 };
 
 export async function* run(config: RunConfig) {
@@ -132,7 +159,7 @@ export async function* run(config: RunConfig) {
       const secretAskingKit = config.interactiveSecrets
         ? [createSecretAskingKit(next)]
         : [];
-      const kits = [...secretAskingKit, ...configureKits(config)];
+      const kits = [...secretAskingKit, ...(await configureKits(config))];
 
       for await (const data of runLocally(config, kits)) {
         await next(data);

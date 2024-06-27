@@ -269,12 +269,18 @@ export class UI extends LitElement {
     let boardTitle = this.graph?.title;
     let boardVersion = this.graph?.version;
     let boardDescription = this.graph?.description;
+    let boardPublished: boolean | null =
+      this.graph?.metadata?.tags?.includes("published") ?? false;
+    let boardIsTool: boolean | null =
+      this.graph?.metadata?.tags?.includes("tool") ?? false;
     if (this.subGraphId && this.graph && this.graph.graphs) {
       const subGraph = this.graph.graphs[this.subGraphId];
       if (subGraph) {
         boardTitle = subGraph.title;
         boardVersion = subGraph.version;
         boardDescription = subGraph.description;
+        boardPublished = null;
+        boardIsTool = subGraph.metadata?.tags?.includes("tool") ?? false;
       }
     }
 
@@ -320,6 +326,11 @@ export class UI extends LitElement {
           ?.value
       : false;
 
+    const showPortTooltips = this.settings
+      ? this.settings[SETTINGS_TYPE.GENERAL].items.get("Show Port Tooltips")
+          ?.value
+      : false;
+
     /**
      * Create all the elements we need.
      */
@@ -336,6 +347,7 @@ export class UI extends LitElement {
         showNodeShortcuts,
         showNodeTypeDescriptions,
         invertZoomScrollDirection,
+        showPortTooltips,
       ],
       () => {
         return html`<bb-editor
@@ -352,6 +364,7 @@ export class UI extends LitElement {
           .showNodeShortcuts=${showNodeShortcuts}
           .showNodeTypeDescriptions=${showNodeTypeDescriptions}
           .invertZoomScrollDirection=${invertZoomScrollDirection}
+          .showPortTooltips=${showPortTooltips}
           @bbmultiedit=${(evt: MultiEditEvent) => {
             const deletedNodes: RemoveNodeSpec[] = evt.edits.filter(
               (edit) => edit.type === "removenode"
@@ -477,13 +490,18 @@ export class UI extends LitElement {
         boardTitle,
         boardVersion,
         boardDescription,
+        boardPublished,
+        boardIsTool,
       ],
       () => {
         return html`<bb-board-details
           .boardTitle=${boardTitle}
           .boardVersion=${boardVersion}
           .boardDescription=${boardDescription}
+          .boardPublished=${boardPublished}
+          .boardIsTool=${boardIsTool}
           .subGraphId=${this.subGraphId}
+          .active=${this.graph !== null}
         >
         </bb-board-details>`;
       }
@@ -606,7 +624,9 @@ export class UI extends LitElement {
           <button
             id="run"
             title="Run this board"
-            ?disabled=${this.status !== STATUS.STOPPED || this.failedToLoad}
+            ?disabled=${this.status !== STATUS.STOPPED ||
+            this.failedToLoad ||
+            !this.graph}
             @click=${() => {
               this.selectedNodeIds.length = 0;
               this.dispatchEvent(new RunEvent());
@@ -617,7 +637,9 @@ export class UI extends LitElement {
           <button
             id="stop"
             title="Stop this board"
-            ?disabled=${this.status === STATUS.STOPPED || this.failedToLoad}
+            ?disabled=${this.status === STATUS.STOPPED ||
+            this.failedToLoad ||
+            !this.graph}
             @click=${() => {
               this.selectedNodeIds.length = 0;
               this.dispatchEvent(new StopEvent());

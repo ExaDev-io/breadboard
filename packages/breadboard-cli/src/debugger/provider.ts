@@ -93,6 +93,15 @@ export class DebuggerGraphProvider implements GraphProvider {
     );
   }
 
+  async create(
+    _url: URL,
+    _descriptor: GraphDescriptor
+  ): Promise<{ result: boolean; error?: string | undefined }> {
+    throw new Error(
+      "The `DebuggerGraphProvider` should not be used to create graphs."
+    );
+  }
+
   async delete(
     _url: URL
   ): Promise<{ result: boolean; error?: string | undefined }> {
@@ -137,7 +146,7 @@ export class DebuggerGraphProvider implements GraphProvider {
       boards.map((board) => {
         return [
           board.title,
-          { url: board.url, readonly: false, handle: undefined },
+          { url: board.url, mine: true, readonly: false, handle: undefined },
         ];
       })
     );

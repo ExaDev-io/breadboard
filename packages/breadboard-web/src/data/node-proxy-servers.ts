@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2024 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { HarnessProxyConfig, RunConfig } from "@google-labs/breadboard/harness";
 import { SettingsStore } from "./settings-store";
 import * as BreadboardUI from "@google-labs/breadboard-ui";
@@ -6,6 +12,8 @@ type SettingEntry = {
   name: string;
   value: string | number | boolean;
 };
+
+const PYTHON_NODES = ["runPython"];
 
 const createNodeProxyConfig = (entry: SettingEntry) => {
   const url = entry.name;
@@ -20,23 +28,32 @@ const createNodeProxyConfig = (entry: SettingEntry) => {
 };
 
 export const addNodeProxyServerConfig = (
+  existingProxy: HarnessProxyConfig[],
   config: RunConfig,
-  settings: SettingsStore | null
+  settings: SettingsStore | null,
+  proxyUrl?: string | undefined
 ): RunConfig => {
-  if (!settings) return config;
+  // TODO: Consolidate proxyUrl into settings.
+  const proxy = [...existingProxy];
+  if (proxyUrl) {
+    proxy.push({ location: "python", url: proxyUrl, nodes: PYTHON_NODES });
+  }
+  if (!settings) return { ...config, proxy };
 
   const servers = settings.getSection(
     BreadboardUI.Types.SETTINGS_TYPE.NODE_PROXY_SERVERS
   );
   if (!servers) return config;
   const values = Array.from(servers.items.values());
-  if (!values.length) return config;
+  if (!values.length) return { ...config, proxy };
 
-  const proxy = values
-    .map(createNodeProxyConfig)
-    .filter(Boolean) as HarnessProxyConfig[];
+  proxy.push(
+    ...(values
+      .map(createNodeProxyConfig)
+      .filter(Boolean) as HarnessProxyConfig[])
+  );
 
-  if (!proxy.length) return config;
+  if (!proxy.length) return { ...config, proxy };
 
   console.log("🚀 Using proxy servers:", proxy);
   return { ...config, proxy };

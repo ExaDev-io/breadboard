@@ -5,7 +5,7 @@
  */
 
 import { LitElement, html, css, nothing } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import * as PIXI from "pixi.js";
 import {
   GraphNodeSelectedEvent,
@@ -19,6 +19,7 @@ import {
   GraphNodesVisualUpdateEvent,
   GraphInitialDrawEvent,
   GraphEntityRemoveEvent,
+  StartEvent,
 } from "../../events/events.js";
 import { GRAPH_OPERATIONS } from "./types.js";
 import { Graph } from "./graph.js";
@@ -71,6 +72,18 @@ export class GraphRenderer extends LitElement {
 
   @property({ reflect: true })
   invertZoomScrollDirection = false;
+
+  @property({ reflect: true })
+  readOnly = false;
+
+  @property()
+  showPortTooltips = false;
+
+  @state()
+  private _portTooltip?: {
+    location: PIXI.ObservablePoint;
+    port: InspectablePort;
+  } = undefined;
 
   #app = new PIXI.Application();
   #appInitialized = false;
@@ -156,14 +169,18 @@ export class GraphRenderer extends LitElement {
       cursor: grabbing;
     }
 
+    :host([readonly="true"]) canvas {
+      touch-action: manipulation !important;
+    }
+
     canvas {
       display: block;
-      touch-action: none;
     }
 
     #edge-create-disambiguation-menu,
     #edge-select-disambiguation-menu,
-    #overflow-menu {
+    #overflow-menu,
+    #port-tooltip {
       z-index: 1000;
       display: none;
       top: 0;
@@ -176,6 +193,10 @@ export class GraphRenderer extends LitElement {
       border: 1px solid var(--bb-neutral-300);
       border-radius: var(--bb-grid-size-2);
       overflow: auto;
+    }
+
+    #port-tooltip.visible {
+      display: block;
     }
 
     #edge-select-disambiguation-menu.visible,
@@ -394,6 +415,10 @@ export class GraphRenderer extends LitElement {
     this.#app.stage.addListener(
       "pointerdown",
       (evt: PIXI.FederatedPointerEvent) => {
+        if (!evt.isPrimary || this.readOnly) {
+          return;
+        }
+
         for (const graph of this.#container.children) {
           if (!(graph instanceof Graph)) {
             continue;
@@ -415,6 +440,10 @@ export class GraphRenderer extends LitElement {
     this.#app.stage.addListener(
       "pointermove",
       (evt: PIXI.FederatedPointerEvent) => {
+        if (!evt.isPrimary || this.readOnly) {
+          return;
+        }
+
         if (this.#mode === MODE.MOVE) {
           onStageMove(evt);
           return;
@@ -440,34 +469,40 @@ export class GraphRenderer extends LitElement {
     this.#app.stage.addListener("pointerup", onPointerUp);
     this.#app.stage.addListener("pointerupoutside", onPointerUp);
 
-    this.#app.stage.on(
-      "wheel",
-      function (this: GraphRenderer, evt) {
-        if (evt.metaKey) {
-          let delta =
-            1 -
-            (evt.deltaY / this.zoomFactor) *
-              (this.invertZoomScrollDirection ? -1 : 1);
-          const newScale = this.#container.scale.x * delta;
-          if (newScale < this.minScale || newScale > this.maxScale) {
-            delta = 1;
-          }
+    if (this.readOnly) {
+      return;
+    }
 
-          const pivot = this.#app.stage.toLocal(evt.global);
-          const matrix = this.#scaleContainerAroundPoint(delta, pivot);
+    const onWheel = (evt: PIXI.FederatedWheelEvent) => {
+      if (this.readOnly) {
+        this.#app.stage.off("wheel", onWheel);
+      }
 
-          if (!this.#background) {
-            return;
-          }
-
-          this.#background.tileTransform.setFromMatrix(matrix);
-        } else {
-          this.#container.x -= evt.deltaX;
-          this.#container.y -= evt.deltaY;
+      if (evt.metaKey || evt.ctrlKey) {
+        let delta =
+          1 -
+          (evt.deltaY / this.zoomFactor) *
+            (this.invertZoomScrollDirection ? -1 : 1);
+        const newScale = this.#container.scale.x * delta;
+        if (newScale < this.minScale || newScale > this.maxScale) {
+          delta = 1;
         }
-      },
-      this
-    );
+
+        const pivot = this.#app.stage.toLocal(evt.global);
+        const matrix = this.#scaleContainerAroundPoint(delta, pivot);
+
+        if (!this.#background) {
+          return;
+        }
+
+        this.#background.tileTransform.setFromMatrix(matrix);
+      } else {
+        this.#container.x -= evt.deltaX;
+        this.#container.y -= evt.deltaY;
+      }
+    };
+
+    this.#app.stage.on("wheel", onWheel);
   }
 
   #scaleContainerAroundPoint(delta: number, pivot: PIXI.PointData) {
@@ -549,6 +584,17 @@ export class GraphRenderer extends LitElement {
     this.updateGraphByUrl(opts.url, opts.subGraphId, opts);
   }
 
+  deleteGraphs() {
+    for (const child of this.#container.children) {
+      if (!(child instanceof Graph)) {
+        return false;
+      }
+
+      child.removeFromParent();
+      child.destroy();
+    }
+  }
+
   updateGraphByUrl(
     url: string,
     subGraphId: string | null,
@@ -597,6 +643,8 @@ export class GraphRenderer extends LitElement {
         graph.mask = this.#graphMask;
       }
     }
+
+    graph.readOnly = this.readOnly;
 
     return true;
   }
@@ -802,6 +850,21 @@ export class GraphRenderer extends LitElement {
       }
     );
 
+    graph.on(GRAPH_OPERATIONS.GRAPH_BOARD_LINK_CLICKED, (board: string) => {
+      this.dispatchEvent(new StartEvent(board));
+    });
+
+    graph.on(
+      GRAPH_OPERATIONS.GRAPH_NODE_PORT_MOUSEENTER,
+      (port: InspectablePort, location: PIXI.ObservablePoint) => {
+        this._portTooltip = { port, location };
+      }
+    );
+
+    graph.on(GRAPH_OPERATIONS.GRAPH_NODE_PORT_MOUSELEAVE, () => {
+      this._portTooltip = undefined;
+    });
+
     this.#container.addChild(graph);
   }
 
@@ -992,7 +1055,7 @@ export class GraphRenderer extends LitElement {
       return;
     }
 
-    if (evt.code === "Space") {
+    if (evt.code === "Space" && !this.readOnly) {
       this.#mode = MODE.MOVE;
       return;
     }
@@ -1034,13 +1097,17 @@ export class GraphRenderer extends LitElement {
   }
 
   #onKeyUp(evt: KeyboardEvent) {
-    if (evt.code === "Space") {
+    if (evt.code === "Space" && !this.readOnly) {
       this.#mode = MODE.SELECT;
       return;
     }
   }
 
   #onWheel(evt: WheelEvent) {
+    if (this.readOnly) {
+      return;
+    }
+
     evt.preventDefault();
   }
 
@@ -1066,7 +1133,7 @@ export class GraphRenderer extends LitElement {
     this.removeEventListener("wheel", this.#onWheelBound);
   }
 
-  async loadTexturesAndRender() {
+  async loadTexturesAndInitializeRenderer() {
     if (this.#appInitialized) {
       return this.#app.canvas;
     }
@@ -1463,8 +1530,27 @@ export class GraphRenderer extends LitElement {
         </div>`
       : nothing;
 
-    return html`${until(
-      this.loadTexturesAndRender()
-    )}${overflowMenu}${edgeSelectDisambiguationMenu}${edgeMenu}`;
+    return [
+      until(this.loadTexturesAndInitializeRenderer()),
+      overflowMenu,
+      edgeSelectDisambiguationMenu,
+      edgeMenu,
+      this.#renderPortTooltip(),
+    ];
+  }
+
+  #renderPortTooltip() {
+    if (!this.showPortTooltips) {
+      return;
+    }
+    const { port, location } = this._portTooltip ?? {};
+    return html`<pp-port-tooltip
+      id="port-tooltip"
+      .port=${port}
+      class=${classMap({ visible: port != null })}
+      style=${styleMap({
+        translate: `${location?.x ?? 0}px ${location?.y ?? 0}px`,
+      })}
+    ></pp-port-tooltip>`;
   }
 }

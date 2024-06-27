@@ -59,7 +59,7 @@
         "../palm-kit:build",
         "../pinecone-kit:build",
         "../python-wasm:build",
-        "../team-kit:build",
+        "../manifest:build",
         "build:vite",
         "build:tsc",
         "generate:graphs"
@@ -80,7 +80,7 @@
         "../palm-kit:build:tsc",
         "../pinecone-kit:build:tsc",
         "../python-wasm:build:tsc",
-        "../team-kit:build:tsc"
+        "../manifest:build"
       ],
       "files": [
         "src/**/*.ts",
@@ -189,6 +189,7 @@
       "dependencies": [
         "../agent-kit:build"
       ],
+      "files": [],
       "output": [
         "public/*.kit.json"
       ]
@@ -206,9 +207,21 @@
     "generate:graphs": {
       "command": "tsx src/make-graphs.ts",
       "dependencies": [
-        "typescript-files-and-deps"
+        "../breadboard:build:tsc",
+        "../build:build:tsc",
+        "../core-kit:build",
+        "../gemini-kit:build",
+        "../google-drive-kit:build",
+        "../json-kit:build",
+        "../manifest:build:ts",
+        "../node-nursery-web:build",
+        "../palm-kit:build",
+        "../pinecone-kit:build",
+        "../template-kit:build"
       ],
-      "files": [],
+      "files": [
+        "src/boards/**/*.ts"
+      ],
       "output": [
         "public/local-boards.json",
         "public/graphs/**/*.json",
@@ -265,16 +278,16 @@
     "@ava/typescript": "^4.0.0",
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@google-labs/tsconfig": "^0.0.1",
-    "@types/node": "^20.14.2",
-    "@typescript-eslint/eslint-plugin": "^7.13.0",
-    "@typescript-eslint/parser": "^7.13.0",
+    "@types/node": "^20.14.8",
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.13.1",
     "ava": "^5.2.0",
     "dotenv": "^16.4.5",
-    "tsx": "^4.15.4",
+    "tsx": "^4.15.7",
     "typedoc": "^0.25.12",
-    "typedoc-plugin-markdown": "^4.0.3",
+    "typedoc-plugin-markdown": "^4.1.0",
     "typescript": "^5.4.5",
-    "vite": "^5.3.0",
+    "vite": "^5.3.1",
     "vite-plugin-full-reload": "^1.1.0",
     "vite-plugin-watch-and-run": "^1.7.0",
     "vitest": "^1.6.0"
@@ -283,11 +296,12 @@
     "@breadboard-ai/build": "^0.6.0",
     "@breadboard-ai/google-drive-kit": "^0.1.0",
     "@breadboard-ai/python-wasm": "^0.1.0",
-    "@codemirror/autocomplete": "^6.16.2",
+    "@codemirror/autocomplete": "^6.16.3",
     "@codemirror/commands": "^6.6.0",
     "@codemirror/lang-javascript": "^6.2.2",
     "@google-labs/agent-kit": "^0.7.0",
     "@google-labs/breadboard": "^0.20.0",
+    "@google-labs/breadboard-manifest": "^0.1.0",
     "@google-labs/breadboard-ui": "^0.8.0",
     "@google-labs/core-kit": "^0.9.0",
     "@google-labs/gemini-kit": "^0.4.0",
@@ -295,7 +309,6 @@
     "@google-labs/node-nursery-web": "^1.1.3",
     "@google-labs/palm-kit": "^0.0.14",
     "@google-labs/pinecone-kit": "^0.1.12",
-    "@google-labs/team-kit": "^0.1.0",
     "@google-labs/template-kit": "^0.3.2",
     "@lit/context": "^1.1.2",
     "codemirror": "^6.0.1",

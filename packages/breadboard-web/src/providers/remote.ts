@@ -9,6 +9,7 @@ import {
   GraphDescriptor,
   GraphProvider,
   GraphProviderCapabilities,
+  GraphProviderItem,
   blankLLMContent,
 } from "@google-labs/breadboard";
 import { GraphProviderStore } from "./types";
@@ -24,6 +25,15 @@ interface GraphDBStoreList extends idb.DBSchema {
     key: string;
     value: GraphDBStore;
   };
+}
+
+interface RemoteFileListing {
+  mine: boolean;
+  path: string;
+  readonly: boolean;
+  username?: string;
+  title?: string;
+  tags?: string[];
 }
 
 const STORE_LIST = "remote-store-list";
@@ -89,7 +99,7 @@ export class RemoteGraphProvider implements GraphProvider {
     {
       permission: "unknown" | "prompt" | "granted";
       title: string;
-      items: Map<string, { url: string; readonly: boolean; handle: void }>;
+      items: Map<string, GraphProviderItem & { handle: void }>;
     }
   >();
 
@@ -244,11 +254,18 @@ export class RemoteGraphProvider implements GraphProvider {
   }
 
   async createBlank(url: URL): Promise<{ result: boolean; error?: string }> {
+    return this.create(url, blankLLMContent());
+  }
+
+  async create(
+    url: URL,
+    descriptor: GraphDescriptor
+  ): Promise<{ result: boolean; error?: string }> {
     if (!this.canProvide(url)) {
       return { result: false };
     }
 
-    const data = await this.#sendToRemote(url, blankLLMContent());
+    const data = await this.#sendToRemote(new URL(url), descriptor);
     if (data.error) {
       return { result: false };
     }
@@ -292,25 +309,35 @@ export class RemoteGraphProvider implements GraphProvider {
     try {
       const request = createRequest(`${store.url}/boards`, store.apiKey, "GET");
       const response = await fetch(request);
-      const files = await response.json();
+      const files: RemoteFileListing[] = await response.json();
 
-      const items = new Map<
-        string,
-        { url: string; readonly: boolean; handle: void }
-      >();
+      const items = new Map<string, GraphProviderItem & { handle: void }>();
       for (const item of files) {
         let file: string;
         let readonly: boolean;
+        let mine: boolean;
+        let tags: string[] | undefined;
+        let username: string | undefined;
+        let title: string | undefined;
         if (typeof item === "string") {
           file = item;
           readonly = false;
+          mine = false;
         } else {
           file = item.path;
           readonly = item.readonly;
+          mine = item.mine;
+          tags = item.tags;
+          username = item.username;
+          title = item.title;
         }
         items.set(file, {
           url: `${store.url}/boards/${file}`,
           readonly,
+          mine,
+          username,
+          title,
+          tags,
           handle: void 0,
         });
       }

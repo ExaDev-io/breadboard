@@ -10,17 +10,15 @@ import {
   GraphProviderAddEvent,
   GraphProviderBlankBoardEvent,
   GraphProviderDeleteRequestEvent,
-  // GraphProviderDeleteRequestEvent,
   GraphProviderDisconnectEvent,
   GraphProviderLoadRequestEvent,
   GraphProviderRefreshEvent,
   GraphProviderRenewAccessRequestEvent,
+  GraphProviderSelectionChangeEvent,
 } from "../../events/events.js";
 import { map } from "lit/directives/map.js";
 import { GraphProvider } from "@google-labs/breadboard";
 import { classMap } from "lit/directives/class-map.js";
-
-const STORAGE_PREFIX = "bb-nav";
 
 @customElement("bb-nav")
 export class Navigation extends LitElement {
@@ -43,6 +41,9 @@ export class Navigation extends LitElement {
   selectedLocation = "default";
 
   @state()
+  filter: string | null = null;
+
+  @state()
   showProviderOverflowMenu = false;
 
   #hideProviderOverflowMenuBound = this.#hideProviderOverflowMenu.bind(this);
@@ -56,7 +57,7 @@ export class Navigation extends LitElement {
       position: fixed;
       top: 0;
       left: 0;
-      width: min(80vw, 340px);
+      width: min(80vw, 380px);
       height: 100%;
       overflow: hidden;
       z-index: 1000;
@@ -103,6 +104,18 @@ export class Navigation extends LitElement {
       padding: 0;
       font: 400 var(--bb-title-medium) / var(--bb-title-line-height-medium)
         var(--bb-font-family);
+    }
+
+    #menu > header > #search {
+      padding: var(--bb-grid-size-2);
+      border-radius: var(--bb-grid-size);
+      border: 1px solid var(--bb-neutral-300);
+      grid-column: 1/3;
+    }
+
+    #menu > header > #search:placeholder-shown {
+      background: var(--bb-icon-search) calc(100% - 8px) center / 20px 20px
+        no-repeat;
     }
 
     #new-board {
@@ -172,12 +185,46 @@ export class Navigation extends LitElement {
       flex: 0 0 auto;
     }
 
-    #provider ul {
-      padding: 0 var(--bb-grid-size-4);
+    #provider .boards {
+      padding: 0;
       list-style: none;
       flex: 1;
       overflow: auto;
       margin: var(--bb-grid-size-4) 0;
+    }
+
+    #provider summary::-webkit-details-marker {
+      display: none;
+    }
+
+    #provider summary {
+      list-style: none;
+    }
+
+    #provider summary {
+      color: var(--bb-neutral-600);
+      font: 400 var(--bb-title-small) / var(--bb-title-line-height-small)
+        var(--bb-font-family);
+      margin-bottom: var(--bb-grid-size-2);
+    }
+
+    #provider summary::before {
+      content: "";
+      width: 20px;
+      height: 20px;
+      background: var(--bb-icon-arrow-right) -1px 6px / 20px 20px no-repeat;
+      display: inline-block;
+      margin: 0;
+    }
+
+    #provider details[open] > summary::before {
+      background: var(--bb-icon-arrow-drop-down) -1px 6px / 20px 20px no-repeat;
+    }
+
+    #provider ul {
+      padding: 0 var(--bb-grid-size-4);
+      list-style: none;
+      margin: 0 0 var(--bb-grid-size-3) 0;
     }
 
     #provider ul li {
@@ -187,11 +234,11 @@ export class Navigation extends LitElement {
     }
 
     #provider ul li .board {
-      display: flex;
+      display: grid;
       background: transparent var(--bb-icon-draft) var(--bb-grid-size)
         var(--bb-grid-size) / 20px 20px no-repeat;
       border: none;
-      color: var(--bb-neutral-600);
+      color: var(--bb-neutral-900);
       font: 400 var(--bb-body-medium) / var(--bb-body-line-height-medium)
         var(--bb-font-family);
       cursor: pointer;
@@ -200,11 +247,41 @@ export class Navigation extends LitElement {
       min-height: var(--bb-grid-size-7);
       text-align: left;
       align-items: center;
+      width: 100%;
+      white-space: nowrap;
+      grid-template-columns: auto 1fr;
+    }
+
+    #provider ul li .board.tool {
+      background: transparent var(--bb-icon-tool) var(--bb-grid-size)
+        var(--bb-grid-size) / 20px 20px no-repeat;
     }
 
     #provider ul li .board.selected {
       color: var(--bb-neutral-900);
+    }
+
+    #provider ul li .board.selected .name {
       font-weight: 500;
+    }
+
+    #provider ul li .board .name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #provider ul li .board .username {
+      color: var(--bb-neutral-600);
+      white-space: no-wrap;
+      padding-left: var(--bb-grid-size-3);
+    }
+
+    #provider ul li .board.mine.published::after {
+      content: "";
+      width: calc(20px + var(--bb-grid-size-2));
+      height: 20px;
+      background: var(--bb-icon-public) right center / 20px 20px no-repeat;
     }
 
     #provider ul li .delete {
@@ -329,16 +406,6 @@ export class Navigation extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
 
-    const url = globalThis.sessionStorage.getItem(`${STORAGE_PREFIX}-provider`);
-
-    if (!url) {
-      return;
-    }
-
-    const [provider, location] = this.#parseUrl(url);
-    this.selectedProvider = provider;
-    this.selectedLocation = location;
-
     window.addEventListener("keydown", this.#hideProviderOverflowMenuBound);
     window.addEventListener("pointerdown", this.#hideProviderOverflowMenuBound);
     this.addEventListener("pointerdown", this.#hideProviderOverflowMenuBound);
@@ -402,6 +469,13 @@ export class Navigation extends LitElement {
         this.selectedLocation = providerNames[0] ?? "default";
       }
     }
+
+    this.dispatchEvent(
+      new GraphProviderSelectionChangeEvent(
+        this.selectedProvider,
+        this.selectedLocation
+      )
+    );
   }
 
   render() {
@@ -428,34 +502,124 @@ export class Navigation extends LitElement {
       this.selectedLocation
     );
 
+    // Divide the items into two buckets: those that belong to the user and
+    // other published boards.
+    const items = [...store.items].filter(([name]) => {
+      if (!this.filter) {
+        return true;
+      }
+      const filter = new RegExp(this.filter, "gim");
+      return filter.test(name);
+    });
+    const myItems: typeof items = [];
+    const otherItems: typeof items = [];
+    for (const item of items) {
+      const [, data] = item;
+      if (data.mine) {
+        myItems.push(item);
+        continue;
+      }
+
+      otherItems.push(item);
+    }
+
+    type BoardInfo = (typeof items)[0];
+    const renderBoards = ([
+      name,
+      { url, readonly, mine, tags, title, username },
+    ]: BoardInfo) => {
+      return html`<li>
+        <button
+          @click=${() => {
+            this.dispatchEvent(
+              new GraphProviderLoadRequestEvent(provider.name, url)
+            );
+          }}
+          class=${classMap({
+            mine,
+            board: true,
+            selected: url === this.url,
+            tool: tags?.includes("tool") ?? false,
+            published: tags?.includes("published") ?? false,
+          })}
+        >
+          <span class="name">${title ?? name}</span>
+          ${username && !mine
+            ? html`<span class="username">@${username}</span>`
+            : ""}
+        </button>
+        ${extendedCapabilities.modify && !readonly
+          ? html`<button
+              class="delete"
+              @click=${() => {
+                this.dispatchEvent(
+                  new GraphProviderDeleteRequestEvent(
+                    this.selectedProvider,
+                    url,
+                    url === this.url
+                  )
+                );
+              }}
+            >
+              Delete
+            </button>`
+          : nothing}
+      </li>`;
+    };
+
+    const myBoards = html`<ul class="mine">
+      ${map(myItems, renderBoards)}
+    </ul>`;
+
+    const otherBoards = html`<ul class="other-boards">
+      ${map(otherItems, renderBoards)}
+    </ul>`;
+
+    let boardListing;
+    if (myItems.length > 0 && otherItems.length > 0) {
+      boardListing = html`<div class="boards">
+        <details open>
+          <summary>Your boards</summary>
+          ${myBoards}
+        </details>
+        <details open>
+          <summary>Other people's boards</summary>
+          ${otherBoards}
+        </details>
+      </div>`;
+    } else if (myItems.length > 0 && otherItems.length === 0) {
+      boardListing = html`<div class="boards">${myBoards}</div>`;
+    } else if (myItems.length === 0 && otherItems.length > 0) {
+      boardListing = html`<div class="boards">${otherBoards}</div>`;
+    } else {
+      boardListing = html`<div id="empty-provider">
+        No boards in this provider
+      </div>`;
+    }
+
     return html`<nav id="menu">
         <header>
           <h1>Breadboard</h1>
-          ${extendedCapabilities.modify
-            ? html` <button
-                id="new-board"
-                ?disabled=${permission === "prompt"}
-                @click=${() => {
-                  const fileName = prompt(
-                    "What would you like to name this file?",
-                    "new-board.json"
-                  );
-                  if (!fileName) {
-                    return;
-                  }
+          <button
+            id="new-board"
+            @click=${() => {
+              this.dispatchEvent(new GraphProviderBlankBoardEvent());
+            }}
+          >
+            New board
+          </button>
+          <input
+            type="search"
+            id="search"
+            placeholder="Search boards"
+            @input=${(evt: InputEvent) => {
+              if (!(evt.target instanceof HTMLInputElement)) {
+                return;
+              }
 
-                  this.dispatchEvent(
-                    new GraphProviderBlankBoardEvent(
-                      this.selectedProvider,
-                      this.selectedLocation,
-                      fileName
-                    )
-                  );
-                }}
-              >
-                New board
-              </button>`
-            : nothing}
+              this.filter = evt.target.value;
+            }}
+          />
         </header>
         <section id="provider">
           <header>
@@ -471,9 +635,8 @@ export class Navigation extends LitElement {
                   this.selectedProvider = provider;
                   this.selectedLocation = location;
 
-                  globalThis.sessionStorage.setItem(
-                    `${STORAGE_PREFIX}-provider`,
-                    evt.target.value
+                  this.dispatchEvent(
+                    new GraphProviderSelectionChangeEvent(provider, location)
                   );
                 }}
               >
@@ -483,7 +646,7 @@ export class Navigation extends LitElement {
                     const isSelectedOption = value === selected;
                     return html`<option
                       ?selected=${isSelectedOption}
-                      value=${value}
+                      .value=${value}
                     >
                       ${store.title}
                     </option>`;
@@ -501,48 +664,7 @@ export class Navigation extends LitElement {
             </div>
           </header>
           ${permission === "granted"
-            ? html`${store.items.size > 0
-                ? html`<ul>
-                    ${map(store.items, ([name, { url, readonly }]) => {
-                      return html`<li>
-                        <button
-                          @click=${() => {
-                            this.dispatchEvent(
-                              new GraphProviderLoadRequestEvent(
-                                provider.name,
-                                url
-                              )
-                            );
-                          }}
-                          class=${classMap({
-                            board: true,
-                            selected: url === this.url,
-                          })}
-                        >
-                          ${name}
-                        </button>
-                        ${extendedCapabilities.modify && !readonly
-                          ? html`<button
-                              class="delete"
-                              @click=${() => {
-                                this.dispatchEvent(
-                                  new GraphProviderDeleteRequestEvent(
-                                    this.selectedProvider,
-                                    url,
-                                    url === this.url
-                                  )
-                                );
-                              }}
-                            >
-                              Delete
-                            </button>`
-                          : nothing}
-                      </li>`;
-                    })}
-                  </ul>`
-                : html`<div id="empty-provider">
-                    No boards in this provider
-                  </div>`}`
+            ? boardListing
             : html`<div id="renew-access">
                 <span>Access has expired for this source</span>
                 <button

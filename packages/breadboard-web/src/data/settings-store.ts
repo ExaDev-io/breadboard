@@ -10,7 +10,7 @@ import * as BreadboardUI from "@google-labs/breadboard-ui";
 interface SettingsDB extends BreadboardUI.Types.SettingsList, idb.DBSchema {}
 
 const SETTINGS_NAME = "settings";
-const SETTINGS_VERSION = 6;
+const SETTINGS_VERSION = 7;
 
 export class SettingsStore {
   static #instance: SettingsStore;
@@ -44,7 +44,7 @@ export class SettingsStore {
             name: "Collapse Nodes by Default",
             description:
               "Whether you wish to have nodes in the graph collapsed by default",
-            value: false,
+            value: true,
           },
         ],
         [
@@ -53,7 +53,7 @@ export class SettingsStore {
             name: "Hide Embedded Board Selector When Empty",
             description:
               "If there are no embedded boards in the current one, hide the selector",
-            value: false,
+            value: true,
           },
         ],
         [
@@ -62,7 +62,7 @@ export class SettingsStore {
             name: "Hide Advanced Ports on Nodes",
             description:
               "Toggles the visibility of $error, star (*), and control ports on nodes (unless connected)",
-            value: false,
+            value: true,
           },
         ],
         [
@@ -80,6 +80,15 @@ export class SettingsStore {
             name: "Show Node Type Descriptions",
             description:
               "Toggles the visibility of node type descriptions in graph nodes",
+            value: false,
+          },
+        ],
+        [
+          "Show Port Tooltips",
+          {
+            name: "Show Port Tooltips",
+            description:
+              "Toggles whether hovering over a port shows a tooltip with advanced port details",
             value: false,
           },
         ],

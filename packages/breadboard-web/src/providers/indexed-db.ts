@@ -8,6 +8,7 @@ import * as idb from "idb";
 import {
   GraphProvider,
   GraphProviderCapabilities,
+  GraphProviderItem,
   blankLLMContent,
 } from "@google-labs/breadboard";
 import { GraphProviderStore } from "./types";
@@ -40,7 +41,7 @@ const IDB_PROTOCOL = "idb:";
 const DEFAULT_STORE: GraphDBStore = {
   name: "default",
   version: 1,
-  title: "Board Store",
+  title: "Browser Storage",
 };
 const PREFIX = IDB_PROTOCOL + "//";
 
@@ -59,7 +60,7 @@ export class IDBGraphProvider implements GraphProvider {
     {
       permission: "unknown" | "prompt" | "granted";
       title: string;
-      items: Map<string, { url: string; readonly: boolean; handle: void }>;
+      items: Map<string, GraphProviderItem & { handle: void }>;
     }
   >();
 
@@ -108,6 +109,21 @@ export class IDBGraphProvider implements GraphProvider {
     if (storeList.length === 0) {
       await storeDb.put("stores", DEFAULT_STORE);
       storeList = await storeDb.getAll("stores");
+    } else {
+      // TODO: Remove this eventually. For now, it's a useful way of updating
+      // the title of the default store when it's changed.
+      for (const store of storeList) {
+        if (
+          store.name === DEFAULT_STORE.name &&
+          store.title !== DEFAULT_STORE.title
+        ) {
+          console.warn(
+            `Updating "Board Store" title to ${DEFAULT_STORE.title}`
+          );
+          store.title = DEFAULT_STORE.title;
+          await storeDb.put("stores", store);
+        }
+      }
     }
 
     this.#storeLocations = storeList;
@@ -154,12 +170,19 @@ export class IDBGraphProvider implements GraphProvider {
   }
 
   async createBlank(url: URL): Promise<{ result: boolean; error?: string }> {
+    return this.create(url, blankLLMContent());
+  }
+
+  async create(
+    url: URL,
+    descriptor: GraphDescriptor
+  ): Promise<{ result: boolean; error?: string }> {
     const existingBoard = await this.load(url);
     if (existingBoard) {
       return { result: false, error: "Unable to create: board already exists" };
     }
 
-    return this.save(url, blankLLMContent());
+    return this.save(url, descriptor);
   }
 
   async save(
@@ -255,18 +278,27 @@ export class IDBGraphProvider implements GraphProvider {
     }
 
     const itemsByUrl = graphs.map(
-      (
-        descriptor
-      ): [string, { url: string; readonly: boolean; handle: void }] => {
+      (descriptor): [string, GraphProviderItem & { handle: void }] => {
         const url = descriptor.url || "";
         const { fileName } = this.parseURL(new URL(url));
 
-        return [fileName, { url, readonly: false, handle: void 0 }];
+        return [
+          fileName,
+          {
+            url,
+            tags: descriptor.metadata?.tags,
+            mine: true,
+            readonly: false,
+            handle: void 0,
+          },
+        ];
       }
     );
 
-    const items: Map<string, { url: string; readonly: boolean; handle: void }> =
-      new Map(itemsByUrl);
+    const items: Map<
+      string,
+      { url: string; mine: boolean; readonly: boolean; handle: void }
+    > = new Map(itemsByUrl);
 
     this.#stores.set(store.name, {
       permission: "granted",
