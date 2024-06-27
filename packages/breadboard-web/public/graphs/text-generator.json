@@ -11,21 +11,9 @@
     },
     {
       "from": "input-0",
-      "to": "invoke",
-      "out": "useStreaming",
-      "in": "useStreaming"
-    },
-    {
-      "from": "input-0",
       "to": "runJavascript-0",
       "out": "MODEL",
       "in": "MODEL"
-    },
-    {
-      "from": "invoke",
-      "to": "output-0",
-      "out": "stream",
-      "in": "streamOutput"
     },
     {
       "from": "invoke",
@@ -64,12 +52,6 @@
               "type": "string",
               "title": "Text",
               "description": "The text to generate"
-            },
-            "useStreaming": {
-              "type": "boolean",
-              "title": "Stream",
-              "description": "Whether to stream the output",
-              "default": "false"
             }
           },
           "required": [
@@ -86,18 +68,6 @@
         "schema": {
           "type": "object",
           "properties": {
-            "streamOutput": {
-              "type": [
-                "array",
-                "boolean",
-                "null",
-                "number",
-                "object",
-                "string"
-              ],
-              "title": "Stream",
-              "description": "The generated text"
-            },
             "textOutput": {
               "type": [
                 "array",
@@ -112,7 +82,6 @@
             }
           },
           "required": [
-            "streamOutput",
             "textOutput"
           ]
         }

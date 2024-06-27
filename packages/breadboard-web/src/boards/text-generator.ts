@@ -18,13 +18,6 @@ const text = input({
   description: "The text to generate",
 });
 
-const useStreaming = input({
-  type: "boolean",
-  title: "Stream",
-  description: "Whether to stream the output",
-  default: false,
-});
-
 const MODEL = input({
       type: enumeration("Gemini Pro", "GPT 3.5 Turbo"),
       title: "Model",
@@ -49,17 +42,11 @@ const switchModel = code(
 const invoker = invoke({
   $id: "invoke",
   $board: switchModel.outputs.path,
-  text,
-  useStreaming
+  text
 });
 
 const textOutput = output(invoker.unsafeOutput("text"), {
   title: "Text",
-  description: "The generated text",
-});
-
-const streamOutput = output(invoker.unsafeOutput("stream"), {
-  title: "Stream",
   description: "The generated text",
 });
 
@@ -68,6 +55,6 @@ export default board({
   description:
     "This is a text generator. It can generate text using various LLMs. Currently, it supports the following models: Google Gemini Pro and OpenAI GPT-3.5 Turbo.",
   version: "0.0.2",
-  inputs: { text, useStreaming, MODEL },
-  outputs: { textOutput, streamOutput }
+  inputs: { text, MODEL },
+  outputs: { textOutput }
 });
