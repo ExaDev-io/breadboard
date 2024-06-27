@@ -50,7 +50,7 @@ const invoker = invoke({
   $id: "invoke",
   $board: switchModel.outputs.path,
   text,
-  useStreaming // This stops erroring if the input type is removed and the default is changed back to "false", but then the board errors when running.
+  useStreaming
 });
 
 const textOutput = output(invoker.unsafeOutput("text"), {
@@ -58,10 +58,10 @@ const textOutput = output(invoker.unsafeOutput("text"), {
   description: "The generated text",
 });
 
-// const streamOutput = output(invoker.unsafeOutput("stream"), {
-//   title: "Stream",
-//   description: "The generated text",
-// });
+const streamOutput = output(invoker.unsafeOutput("stream"), {
+  title: "Stream",
+  description: "The generated text",
+});
 
 export default board({
   title: "Text Generator",
@@ -69,6 +69,5 @@ export default board({
     "This is a text generator. It can generate text using various LLMs. Currently, it supports the following models: Google Gemini Pro and OpenAI GPT-3.5 Turbo.",
   version: "0.0.2",
   inputs: { text, useStreaming, MODEL },
-  // outputs: { textOutput, streamOutput }
-  outputs: { textOutput }
+  outputs: { textOutput, streamOutput }
 });
